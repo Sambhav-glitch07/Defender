@@ -256,6 +256,7 @@ class MainActivity : Activity() {
         Dest.PHONE -> PhoneScreen(env)
         Dest.VEHICLE -> VehicleScreen(env)
         Dest.SETTINGS -> SettingsScreen(env)
+        Dest.APPS -> AppsScreen(env)
     }
 
     fun navigate(d: Dest) {
