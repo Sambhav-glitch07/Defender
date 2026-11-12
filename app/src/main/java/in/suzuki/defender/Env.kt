@@ -19,8 +19,8 @@ enum class Dest(val label: String, val icon: Int) {
     MEDIA("Media", R.drawable.ic_music),
     PHONE("Phone", R.drawable.ic_phone),
     VEHICLE("Vehicle", R.drawable.ic_car),
-    SETTINGS("Settings", R.drawable.ic_settings),
-    APPS("Apps", R.drawable.ic_settings)
+    APPS("Apps", R.drawable.ic_apps),
+    SETTINGS("Settings", R.drawable.ic_settings)
 }
 
 /** Shared services + helpers handed to every screen. */
