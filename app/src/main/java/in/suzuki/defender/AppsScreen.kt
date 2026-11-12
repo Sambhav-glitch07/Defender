@@ -29,8 +29,7 @@ class AppsScreen(env: Env) : Screen(env) {
     private fun build(): View {
         val col = LinearLayout(ctx)
         col.orientation = LinearLayout.VERTICAL
-        col.setBackgroundColor(C.BG)
-
+        
         val head = LinearLayout(ctx)
         head.orientation = LinearLayout.HORIZONTAL
         head.gravity = Gravity.CENTER_VERTICAL
@@ -117,7 +116,7 @@ class AppsScreen(env: Env) : Screen(env) {
         t.orientation = LinearLayout.VERTICAL
         t.gravity = Gravity.CENTER
         t.setPadding(Ui.px(8), Ui.px(10), Ui.px(8), Ui.px(10))
-        t.background = Ui.rect(C.SURFACE, C.LINE)
+        t.background = Ui.rect(C.GLASS, C.LINE)
         val iv = ImageView(ctx)
         iv.setImageDrawable(a.icon)
         iv.scaleType = ImageView.ScaleType.FIT_CENTER
