@@ -156,6 +156,29 @@ class SettingsScreen(env: Env) : Screen(env) {
             row.addView(tile, lp)
         }
         col.addView(row, Ui.mm(MATCH, WRAP))
+
+        val sc = Ui.caps(ctx, "Panel scenery", 11f, C.ACCENT)
+        sc.setPadding(0, Ui.px(34), 0, Ui.px(12))
+        col.addView(sc)
+        val curScene = env.prefs.getInt("scene", 0)
+        val sRow = LinearLayout(ctx)
+        sRow.orientation = LinearLayout.HORIZONTAL
+        listOf("Mixed", "Dusk road", "Desert", "Highland", "Off").forEachIndexed { i, n ->
+            val t = Ui.text(ctx, n.uppercase(), 11f, if (i == curScene) C.ACCENT else C.TEXT, Ui.MED, 0.12f)
+            t.gravity = Gravity.CENTER
+            t.setPadding(Ui.px(6), Ui.px(18), Ui.px(6), Ui.px(18))
+            t.background = Ui.rect(C.SURFACE, if (i == curScene) C.ACCENT else C.LINE, if (i == curScene) 2f else 1f)
+            Ui.pressable(t) {
+                if (i != curScene) {
+                    env.prefs.edit().putInt("scene", i).apply()
+                    env.activity.recreate()
+                }
+            }
+            val lp = Ui.mm(0, WRAP, 1f)
+            lp.setMargins(0, 0, Ui.px(10), 0)
+            sRow.addView(t, lp)
+        }
+        col.addView(sRow, Ui.mm(MATCH, WRAP))
     }
 
     private fun connectivity(col: LinearLayout) {
