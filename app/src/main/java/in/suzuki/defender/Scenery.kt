@@ -12,15 +12,17 @@ import android.view.View
 import java.util.Random
 
 /**
- * Full-bleed "photo-like" scenery for Pivi-Pro-style panels, drawn procedurally with Canvas
- * (sky gradient, glow, layered ridges/dunes, optional road, optional SUV silhouette, dark scrim).
- * Static and cached: no image files, no animation, negligible memory.
+ * Cinematic scenery for panels and the global wallpaper, drawn once with Canvas:
+ * sky + glow + stars/sun, three fractal or rolling ridge layers with atmospheric haze,
+ * fog band, optional road and SUV silhouette, then scrim, vignette and optional dim.
+ * Static and cached: no image files, no animation.
  */
 class SceneryView(
     ctx: Context,
     private val kind: Int,
     private val car: Boolean = false,
-    private val seed: Long = 1L
+    private val seed: Long = 1L,
+    private val dim: Int = 0
 ) : View(ctx) {
 
     companion object {
@@ -31,50 +33,92 @@ class SceneryView(
 
     // palette: sky top, sky horizon, glow, far, mid, near
     private val pal: IntArray = when (kind) {
-        ROAD -> intArrayOf(c("#1E2330"), c("#7A5C4A"), c("#E0A878"), c("#3A3D48"), c("#262932"), c("#15171C"))
-        DESERT -> intArrayOf(c("#3B3F4A"), c("#B08968"), c("#F0C090"), c("#7A5C48"), c("#4F3C30"), c("#2B211B"))
-        else -> intArrayOf(c("#131A24"), c("#3E5568"), c("#9FB8C8"), c("#28384A"), c("#1A2634"), c("#0F1620"))
+        ROAD -> intArrayOf(c("#141A29"), c("#8A5A48"), c("#F2B27A"), c("#4A4656"), c("#2C2D3A"), c("#14161C"))
+        DESERT -> intArrayOf(c("#2B3040"), c("#B9825C"), c("#F6C48F"), c("#8A604A"), c("#58402F"), c("#2A1F19"))
+        else -> intArrayOf(c("#0A101A"), c("#34506A"), c("#8FB4D0"), c("#233649"), c("#172433"), c("#0D141D"))
     }
 
     private val p = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val far = Path()
-    private val mid = Path()
-    private val near = Path()
+    private val layers = Array(3) { Path() }
+    private val shaders = arrayOfNulls<Shader>(3)
     private val road = Path()
     private val body = Path()
     private val glass = Path()
+    private var stars = FloatArray(0)
     private var horizon = 0f
     private var sky: Shader? = null
     private var glow: Shader? = null
+    private var fog: Shader? = null
     private var scrim: Shader? = null
+    private var vignette: Shader? = null
 
     private fun c(s: String) = Color.parseColor(s)
+
+    private fun mix(a: Int, b: Int, t: Float): Int = Color.rgb(
+        (Color.red(a) + (Color.red(b) - Color.red(a)) * t).toInt(),
+        (Color.green(a) + (Color.green(b) - Color.green(a)) * t).toInt(),
+        (Color.blue(a) + (Color.blue(b) - Color.blue(a)) * t).toInt()
+    )
 
     override fun onSizeChanged(w: Int, h: Int, ow: Int, oh: Int) {
         val wf = w.toFloat()
         val hf = h.toFloat()
         horizon = hf * 0.5f
+        val clear = pal[2] and 0x00FFFFFF
         sky = LinearGradient(0f, 0f, 0f, horizon, pal[0], pal[1], Shader.TileMode.CLAMP)
         glow = RadialGradient(
-            wf * 0.62f, horizon, wf * 0.75f,
-            intArrayOf((pal[2] and 0x00FFFFFF) or 0x99000000.toInt(), pal[2] and 0x00FFFFFF),
+            wf * 0.62f, horizon, wf * 0.8f,
+            intArrayOf(clear or 0x99000000.toInt(), clear),
             null, Shader.TileMode.CLAMP
+        )
+        val fc = pal[1] and 0x00FFFFFF
+        fog = LinearGradient(
+            0f, horizon - hf * 0.06f, 0f, horizon + hf * 0.12f,
+            intArrayOf(fc, fc or 0x59000000, fc), floatArrayOf(0f, 0.5f, 1f), Shader.TileMode.CLAMP
         )
         scrim = LinearGradient(
             0f, 0f, 0f, hf,
-            intArrayOf(0x73000000, 0x40000000, 0xD90A0B0C.toInt()),
+            intArrayOf(0x66000000, 0x4D000000, 0xE6070809.toInt()),
             floatArrayOf(0f, 0.5f, 1f), Shader.TileMode.CLAMP
         )
+        vignette = RadialGradient(
+            wf / 2f, hf / 2f, maxOf(wf, hf) * 0.78f,
+            intArrayOf(0x00000000, 0x8C000000.toInt()), floatArrayOf(0.5f, 1f), Shader.TileMode.CLAMP
+        )
+
         val r = Random(seed * 31L + kind)
+        val bases: FloatArray
+        val amps: FloatArray
         if (kind == DESERT) {
-            dunes(far, wf, hf, horizon + hf * 0.02f, hf * 0.05f, r)
-            dunes(mid, wf, hf, horizon + hf * 0.12f, hf * 0.08f, r)
-            dunes(near, wf, hf, horizon + hf * 0.26f, hf * 0.1f, r)
+            bases = floatArrayOf(horizon + hf * 0.01f, horizon + hf * 0.1f, horizon + hf * 0.24f)
+            amps = floatArrayOf(hf * 0.05f, hf * 0.08f, hf * 0.1f)
+            for (i in 0..2) rolling(layers[i], wf, hf, bases[i], amps[i], r)
         } else {
-            ridge(far, wf, hf, horizon - hf * 0.02f, hf * 0.07f, r, 14)
-            ridge(mid, wf, hf, horizon + hf * 0.06f, hf * 0.06f, r, 10)
-            ridge(near, wf, hf, horizon + hf * 0.2f, hf * 0.05f, r, 7)
+            bases = floatArrayOf(horizon - hf * 0.03f, horizon + hf * 0.07f, horizon + hf * 0.2f)
+            amps = floatArrayOf(hf * 0.1f, hf * 0.07f, hf * 0.05f)
+            fractal(layers[0], wf, hf, bases[0], amps[0], r, 0.56f)
+            fractal(layers[1], wf, hf, bases[1], amps[1], r, 0.5f)
+            rolling(layers[2], wf, hf, bases[2], amps[2], r)
         }
+        val cols = intArrayOf(pal[3], pal[4], pal[5])
+        val haze = floatArrayOf(0.5f, 0.3f, 0.12f)
+        for (i in 0..2) {
+            shaders[i] = LinearGradient(
+                0f, bases[i] - amps[i], 0f, bases[i] + hf * 0.3f,
+                mix(cols[i], pal[1], haze[i]), cols[i], Shader.TileMode.CLAMP
+            )
+        }
+
+        stars = FloatArray(0)
+        if (kind == HIGHLAND) {
+            stars = FloatArray(40 * 3)
+            for (i in 0 until 40) {
+                stars[i * 3] = r.nextFloat() * wf
+                stars[i * 3 + 1] = r.nextFloat() * horizon * 0.8f
+                stars[i * 3 + 2] = 70f + r.nextFloat() * 130f
+            }
+        }
+
         road.reset()
         if (kind == ROAD) {
             road.moveTo(-wf * 0.05f, hf)
@@ -86,23 +130,39 @@ class SceneryView(
         buildCar()
     }
 
-    private fun ridge(path: Path, w: Float, h: Float, base: Float, amp: Float, r: Random, steps: Int) {
+    /** Midpoint-displacement ridge: natural-looking mountains instead of straight triangles. */
+    private fun fractal(path: Path, w: Float, h: Float, base: Float, amp: Float, r: Random, rough: Float) {
+        val n = 64
+        val ys = FloatArray(n + 1)
+        ys[0] = base + (r.nextFloat() - 0.5f) * amp
+        ys[n] = base + (r.nextFloat() - 0.5f) * amp
+        var step = n
+        var scale = amp
+        while (step > 1) {
+            val half = step / 2
+            var i = half
+            while (i < n) {
+                ys[i] = (ys[i - half] + ys[i + half]) / 2f + (r.nextFloat() - 0.5f) * scale
+                i += step
+            }
+            step = half
+            scale *= rough
+        }
         path.reset()
         path.moveTo(0f, h)
-        path.lineTo(0f, base + (r.nextFloat() - 0.5f) * amp * 2f)
-        for (i in 1..steps) path.lineTo(w * i / steps, base + (r.nextFloat() - 0.5f) * amp * 2f)
+        for (i in 0..n) path.lineTo(w * i / n, ys[i])
         path.lineTo(w, h)
         path.close()
     }
 
-    private fun dunes(path: Path, w: Float, h: Float, base: Float, amp: Float, r: Random) {
+    private fun rolling(path: Path, w: Float, h: Float, base: Float, amp: Float, r: Random) {
         path.reset()
         path.moveTo(0f, h)
         path.lineTo(0f, base)
-        val steps = 4
+        val steps = 5
         for (i in 1..steps) {
             val cx = w * (i - 0.5f) / steps
-            path.quadTo(cx, base - amp * (0.4f + r.nextFloat()), w * i / steps, base + (r.nextFloat() - 0.5f) * amp)
+            path.quadTo(cx, base - amp * (0.3f + r.nextFloat()), w * i / steps, base + (r.nextFloat() - 0.5f) * amp * 0.6f)
         }
         path.lineTo(w, h)
         path.close()
@@ -127,11 +187,24 @@ class SceneryView(
         p.shader = null
         p.color = pal[5]
         canvas.drawRect(0f, horizon, w, h, p)
-        p.color = pal[3]; canvas.drawPath(far, p)
-        p.color = pal[4]; canvas.drawPath(mid, p)
-        p.color = pal[5]; canvas.drawPath(near, p)
+
+        for (i in 0 until stars.size / 3) {
+            p.color = Color.argb(stars[i * 3 + 2].toInt(), 255, 255, 255)
+            canvas.drawCircle(stars[i * 3], stars[i * 3 + 1], Ui.px(0.9f).toFloat(), p)
+        }
+        if (kind != HIGHLAND) {
+            p.color = (pal[2] and 0x00FFFFFF) or 0xCC000000.toInt()
+            canvas.drawCircle(w * 0.62f, horizon - h * 0.015f, w * 0.055f, p)
+        }
+
+        p.shader = shaders[0]; canvas.drawPath(layers[0], p)
+        p.shader = shaders[1]; canvas.drawPath(layers[1], p)
+        p.shader = fog; canvas.drawRect(0f, horizon - h * 0.06f, w, horizon + h * 0.12f, p)
+        p.shader = shaders[2]; canvas.drawPath(layers[2], p)
+        p.shader = null
+
         if (kind == ROAD) {
-            p.color = Color.parseColor("#101216")
+            p.color = Color.parseColor("#0E1014")
             canvas.drawPath(road, p)
         }
         if (car) {
@@ -154,8 +227,15 @@ class SceneryView(
             }
             canvas.restore()
         }
+
         p.shader = scrim
         canvas.drawRect(0f, 0f, w, h, p)
+        p.shader = vignette
+        canvas.drawRect(0f, 0f, w, h, p)
         p.shader = null
+        if (dim > 0) {
+            p.color = Color.argb(dim, 0, 0, 0)
+            canvas.drawRect(0f, 0f, w, h, p)
+        }
     }
 }
