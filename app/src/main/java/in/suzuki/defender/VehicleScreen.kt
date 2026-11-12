@@ -50,7 +50,7 @@ class VehicleScreen(env: Env) : Screen(env) {
         val dm = ctx.resources.displayMetrics
 
         val c1 = card("Vehicle")
-        c1.setBackgroundColor(C.SURFACE)
+        c1.setBackgroundColor(C.GLASS)
         kv(c1, "EDITION") { "Suzuki Defender Edition" }
         kv(c1, "HEAD UNIT") { "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL}" }
         kv(c1, "ANDROID") { "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})" }
@@ -68,7 +68,7 @@ class VehicleScreen(env: Env) : Screen(env) {
         kv(c2, "STORAGE") { env.sys.freeStorage() }
 
         val c3 = card("Trip & fuel")
-        c3.setBackgroundColor(C.SURFACE)
+        c3.setBackgroundColor(C.GLASS)
         kv(c3, "GPS SPEED") { env.loc.speedKmh()?.let { "${it.toInt()} km/h" } ?: (if (env.loc.granted()) "—" else "Location access off") }
         kv(c3, "DISTANCE THIS SESSION (GPS)") { String.format(Locale.US, "%.1f km", env.loc.sessionMeters / 1000f) }
         kv(c3, "FUEL LEVEL") { "Not connected" }
