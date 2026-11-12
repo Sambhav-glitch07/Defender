@@ -28,7 +28,7 @@ class SettingsScreen(env: Env) : Screen(env) {
 
         val list = LinearLayout(ctx)
         list.orientation = LinearLayout.VERTICAL
-        list.setBackgroundColor(C.SURFACE)
+        list.setBackgroundColor(C.GLASS)
         list.setPadding(0, Ui.px(20), 0, 0)
         cats.forEachIndexed { i, n ->
             val t = Ui.text(ctx, n.uppercase(), 13f, C.DIM, Ui.MED, 0.16f)
@@ -56,7 +56,7 @@ class SettingsScreen(env: Env) : Screen(env) {
         sel = i
         for (k in catViews.indices) {
             catViews[k].setTextColor(if (k == i) C.ACCENT else C.DIM)
-            catViews[k].setBackgroundColor(if (k == i) C.SURFACE2 else 0)
+            catViews[k].setBackgroundColor(if (k == i) C.GLASS2 else 0)
         }
         pane.removeAllViews()
         val col = LinearLayout(ctx)
@@ -138,7 +138,7 @@ class SettingsScreen(env: Env) : Screen(env) {
             tile.orientation = LinearLayout.VERTICAL
             tile.gravity = Gravity.CENTER
             tile.setPadding(Ui.px(10), Ui.px(18), Ui.px(10), Ui.px(18))
-            tile.background = Ui.rect(C.SURFACE, if (name == cur) Color.parseColor(hex) else C.LINE, if (name == cur) 2f else 1f)
+            tile.background = Ui.rect(C.GLASS, if (name == cur) Color.parseColor(hex) else C.LINE, if (name == cur) 2f else 1f)
             val sw = View(ctx)
             sw.setBackgroundColor(Color.parseColor(hex))
             tile.addView(sw, Ui.mm(Ui.px(54), Ui.px(26)))
@@ -167,7 +167,7 @@ class SettingsScreen(env: Env) : Screen(env) {
             val t = Ui.text(ctx, n.uppercase(), 11f, if (i == curScene) C.ACCENT else C.TEXT, Ui.MED, 0.12f)
             t.gravity = Gravity.CENTER
             t.setPadding(Ui.px(6), Ui.px(18), Ui.px(6), Ui.px(18))
-            t.background = Ui.rect(C.SURFACE, if (i == curScene) C.ACCENT else C.LINE, if (i == curScene) 2f else 1f)
+            t.background = Ui.rect(C.GLASS, if (i == curScene) C.ACCENT else C.LINE, if (i == curScene) 2f else 1f)
             Ui.pressable(t) {
                 if (i != curScene) {
                     env.prefs.edit().putInt("scene", i).apply()
