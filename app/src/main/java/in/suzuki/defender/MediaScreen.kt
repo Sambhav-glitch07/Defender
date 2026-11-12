@@ -32,11 +32,10 @@ class MediaScreen(env: Env) : Screen(env) {
     private fun build(): View {
         val row = LinearLayout(ctx)
         row.orientation = LinearLayout.HORIZONTAL
-        row.setBackgroundColor(C.BG)
-
+        
         // ---- album artwork
         val left = FrameLayout(ctx)
-        left.setBackgroundColor(C.SURFACE)
+        left.setBackgroundColor(C.GLASS)
         art = ImageView(ctx)
         art.background = Ui.rect(C.SURFACE2, C.LINE)
         showFallback()
