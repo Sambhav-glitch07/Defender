@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg"
+    android:background="@color/bg">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
     android:orientation="vertical">
 
     <!-- TOP BAR: brand | screen title | status icons | time + date -->
@@ -11,7 +16,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="0.095"
-        android:background="@color/surface"
+        android:background="@color/glass"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="24dp"
@@ -121,8 +126,8 @@
             android:id="@+id/leftRail"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="0.09"
-            android:background="@color/surface"
+            android:layout_weight="0.1"
+            android:background="@color/glass"
             android:orientation="vertical" />
 
         <View
@@ -134,8 +139,7 @@
             android:id="@+id/content"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="0.82"
-            android:background="@color/bg" />
+            android:layout_weight="0.82" />
 
         <View
             android:layout_width="1dp"
@@ -147,8 +151,8 @@
             android:id="@+id/rightRail"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="0.09"
-            android:background="@color/surface"
+            android:layout_weight="0.08"
+            android:background="@color/glass"
             android:gravity="center_horizontal"
             android:orientation="vertical">
 
@@ -201,3 +205,4 @@
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>
+</FrameLayout>
