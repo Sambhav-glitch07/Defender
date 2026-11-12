@@ -2,6 +2,7 @@
 <resources>
     <color name="bg">#0A0B0C</color>
     <color name="surface">#141618</color>
+    <color name="glass">#B3101214</color>
     <color name="line">#2C3034</color>
     <color name="text">#EDE8DF</color>
     <color name="dim">#8E8C86</color>
