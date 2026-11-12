@@ -54,7 +54,7 @@ class PhoneScreen(env: Env) : Screen(env) {
         // ---- connection column
         val left = LinearLayout(ctx)
         left.orientation = LinearLayout.VERTICAL
-        left.setBackgroundColor(C.SURFACE)
+        left.setBackgroundColor(C.GLASS)
         left.setPadding(Ui.px(28), Ui.px(28), Ui.px(28), Ui.px(24))
         left.addView(Ui.caps(ctx, "Connected phone", 11f, C.ACCENT))
         devName = Ui.text(ctx, "", 26f, C.TEXT, Ui.LIGHT)
@@ -150,7 +150,7 @@ class PhoneScreen(env: Env) : Screen(env) {
                 val k = keys[r * 3 + c]
                 val t = Ui.text(ctx, k, 24f, C.TEXT, Ui.LIGHT)
                 t.gravity = Gravity.CENTER
-                t.background = Ui.rect(C.SURFACE, C.LINE)
+                t.background = Ui.rect(C.GLASS, C.LINE)
                 Ui.pressable(t) { number.append(k); updateDisplay() }
                 val lp = Ui.mm(Ui.px(92), Ui.px(50))
                 lp.setMargins(Ui.px(5), Ui.px(4), Ui.px(5), Ui.px(4))
@@ -177,7 +177,7 @@ class PhoneScreen(env: Env) : Screen(env) {
         for (k in tabs.indices) {
             val sel = k == i
             tabs[k].setTextColor(if (sel) C.ACCENT else C.DIM)
-            tabs[k].setBackgroundColor(if (sel) C.SURFACE2 else 0)
+            tabs[k].setBackgroundColor(if (sel) C.GLASS2 else 0)
             panes[k].visibility = if (sel) View.VISIBLE else View.GONE
         }
     }
