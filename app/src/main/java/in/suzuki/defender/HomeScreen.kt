@@ -54,7 +54,6 @@ class HomeScreen(env: Env) : Screen(env) {
 
         // ---- NAVIGATION
         val nav = Ui.panel(ctx, "Navigation", Color.parseColor("#1A1D1F"))
-        nav.frame.addView(MapPanelView(ctx), 0, FrameLayout.LayoutParams(MATCH, MATCH))
         navDest = centered(Ui.text(ctx, "Where to?", 26f, C.TEXT, Ui.LIGHT))
         navSub = centered(Ui.text(ctx, "", 14f, C.DIM))
         nav.body.addView(navDest, Ui.mm(MATCH, WRAP))
@@ -112,12 +111,26 @@ class HomeScreen(env: Env) : Screen(env) {
         addRow(veh.body, "Fuel") { "Not connected" }
         Ui.pressable(veh.frame, false) { env.navigate(Dest.VEHICLE) }
 
+        scene(nav, 0)
+        scene(med, 1)
+        scene(ph, 2)
+        scene(veh, 3, true)
+
         row.addView(nav.frame, Ui.mm(0, MATCH, 1.5f))
         row.addView(sep()); row.addView(med.frame, Ui.mm(0, MATCH, 1f))
         row.addView(sep()); row.addView(ph.frame, Ui.mm(0, MATCH, 1f))
         row.addView(sep()); row.addView(veh.frame, Ui.mm(0, MATCH, 1f))
         refresh()
         return row
+    }
+
+    /** Scenery mode (Settings → Theme): 0 mixed, 1 road, 2 desert, 3 highland, 4 off. */
+    private fun scene(panel: Panel, idx: Int, car: Boolean = false) {
+        val mode = env.prefs.getInt("scene", 0)
+        if (mode == 4) return
+        val mixed = intArrayOf(SceneryView.ROAD, SceneryView.DESERT, SceneryView.HIGHLAND, SceneryView.HIGHLAND)
+        val kind = if (mode == 0) mixed[idx] else mode - 1
+        panel.frame.addView(SceneryView(ctx, kind, car, 7L + idx), 0, FrameLayout.LayoutParams(MATCH, MATCH))
     }
 
     private fun sep(): View {
