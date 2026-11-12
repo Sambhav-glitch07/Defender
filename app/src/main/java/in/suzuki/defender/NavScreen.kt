@@ -84,7 +84,7 @@ class NavScreen(env: Env) : Screen(env) {
         // ---- route column
         val col = LinearLayout(ctx)
         col.orientation = LinearLayout.VERTICAL
-        col.setBackgroundColor(C.SURFACE)
+        col.setBackgroundColor(C.GLASS)
         col.setPadding(Ui.px(28), Ui.px(28), Ui.px(28), Ui.px(24))
         col.addView(Ui.caps(ctx, "Route", 11f, C.ACCENT))
         destText = Ui.text(ctx, "", 26f, C.TEXT, Ui.LIGHT)
