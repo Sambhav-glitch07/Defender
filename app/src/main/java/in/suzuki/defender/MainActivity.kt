@@ -255,8 +255,8 @@ class MainActivity : Activity() {
         Dest.MEDIA -> MediaScreen(env)
         Dest.PHONE -> PhoneScreen(env)
         Dest.VEHICLE -> VehicleScreen(env)
-        Dest.SETTINGS -> SettingsScreen(env)
         Dest.APPS -> AppsScreen(env)
+        Dest.SETTINGS -> SettingsScreen(env)
     }
 
     fun navigate(d: Dest) {
