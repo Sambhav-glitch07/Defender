@@ -27,6 +27,8 @@ object C {
     val BG = Color.parseColor("#0A0B0C")
     val SURFACE = Color.parseColor("#141618")
     val SURFACE2 = Color.parseColor("#1D2023")
+    val GLASS = Color.parseColor("#B3101214")
+    val GLASS2 = Color.parseColor("#B31D2023")
     val LINE = Color.parseColor("#2C3034")
     val TEXT = Color.parseColor("#EDE8DF")
     val DIM = Color.parseColor("#8E8C86")
