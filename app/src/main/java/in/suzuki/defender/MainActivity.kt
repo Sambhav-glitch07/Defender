@@ -73,6 +73,15 @@ class MainActivity : Activity() {
         setContentView(R.layout.activity_main)
         env = Env(this)
 
+        // Global wallpaper behind the glass UI (Pivi-Pro style).
+        val sceneMode = prefs.getInt("scene", 0)
+        if (sceneMode != 4) {
+            val kind = if (sceneMode in 1..3) sceneMode - 1 else SceneryView.HIGHLAND
+            findViewById<FrameLayout>(R.id.root).addView(
+                SceneryView(this, kind, false, 3L, 110), 0, FrameLayout.LayoutParams(MATCH, MATCH)
+            )
+        }
+
         content = findViewById(R.id.content)
         titleText = findViewById(R.id.titleText)
         clockText = findViewById(R.id.clockText)
@@ -183,11 +192,12 @@ class MainActivity : Activity() {
             inner.orientation = LinearLayout.VERTICAL
             inner.gravity = Gravity.CENTER
             val ic = Ui.icon(this, d.icon, 26f, C.DIM)
-            val lb = Ui.text(this, d.label.uppercase(), 9f, C.DIM, Ui.MED, 0.1f)
+            val lb = Ui.text(this, d.label.uppercase(), 9f, C.DIM, Ui.MED, 0.06f)
             lb.maxLines = 1
-            lb.setPadding(0, Ui.px(7), 0, 0)
-            inner.addView(ic)
-            inner.addView(lb)
+            lb.gravity = Gravity.CENTER
+            lb.setPadding(0, Ui.px(8), 0, 0)
+            inner.addView(ic, LinearLayout.LayoutParams(Ui.px(28), Ui.px(28)))
+            inner.addView(lb, LinearLayout.LayoutParams(WRAP, WRAP))
             cell.addView(inner, FrameLayout.LayoutParams(MATCH, MATCH))
             val bar = View(this)
             bar.setBackgroundColor(C.ACCENT)
@@ -304,7 +314,7 @@ class MainActivity : Activity() {
             item.icon.setColorFilter(c)
             item.label.setTextColor(c)
             item.bar.visibility = if (sel) View.VISIBLE else View.INVISIBLE
-            item.cell.setBackgroundColor(if (sel) C.SURFACE2 else 0)
+            item.cell.setBackgroundColor(if (sel) (C.ACCENT and 0x00FFFFFF) or 0x22000000 else 0)
         }
     }
 }
