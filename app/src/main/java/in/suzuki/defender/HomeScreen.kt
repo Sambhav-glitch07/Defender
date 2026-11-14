@@ -22,6 +22,7 @@ class HomeScreen(env: Env) : Screen(env) {
     private lateinit var pName: TextView
     private lateinit var pSub: TextView
     private val vRows = ArrayList<Pair<TextView, () -> String>>()
+    private val panels = ArrayList<View>()
 
     override val root: View by lazy { build() }
 
@@ -116,10 +117,15 @@ class HomeScreen(env: Env) : Screen(env) {
         scene(ph, 2)
         scene(veh, 3, true)
 
-        row.addView(nav.frame, Ui.mm(0, MATCH, 1.5f))
-        row.addView(sep()); row.addView(med.frame, Ui.mm(0, MATCH, 1f))
-        row.addView(sep()); row.addView(ph.frame, Ui.mm(0, MATCH, 1f))
-        row.addView(sep()); row.addView(veh.frame, Ui.mm(0, MATCH, 1f))
+        val all = listOf(nav, med, ph, veh)
+        for ((i, pn) in all.withIndex()) {
+            Ui.roundClip(pn.frame, 24f)
+            pn.frame.foreground = Ui.glass(24f, false)
+            panels.add(pn.frame)
+            val l = Ui.mm(0, MATCH, if (i == 0) 1.5f else 1f)
+            l.setMargins(Ui.px(7), Ui.px(6), Ui.px(7), Ui.px(6))
+            row.addView(pn.frame, l)
+        }
         refresh()
         return row
     }
@@ -186,7 +192,11 @@ class HomeScreen(env: Env) : Screen(env) {
         for ((tv, f) in vRows) tv.text = f()
     }
 
-    override fun onShow() = refresh()
+    override fun onShow() {
+        refresh()
+        Ui.enter(panels, 60L, 70L)
+    }
+
     override fun onTick() = refresh()
     override fun onPermissionsChanged() = refresh()
 }
