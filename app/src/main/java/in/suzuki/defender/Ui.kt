@@ -3,6 +3,18 @@ package `in`.suzuki.defender
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Canvas
+import android.graphics.ColorFilter
+import android.graphics.LinearGradient
+import android.graphics.Outline
+import android.graphics.PixelFormat
+import android.graphics.Rect
+import android.graphics.RectF
+import android.graphics.Shader
+import android.graphics.drawable.Drawable
+import android.view.ViewOutlineProvider
+import android.view.animation.DecelerateInterpolator
+import android.view.animation.OvershootInterpolator
+import android.view.animation.PathInterpolator
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
@@ -29,6 +41,8 @@ object C {
     val SURFACE2 = Color.parseColor("#1D2023")
     val GLASS = Color.parseColor("#B3101214")
     val GLASS2 = Color.parseColor("#B31D2023")
+    val INNER = Color.parseColor("#0FFFFFFF")
+    val INNER2 = Color.parseColor("#22FFFFFF")
     val LINE = Color.parseColor("#2C3034")
     val TEXT = Color.parseColor("#EDE8DF")
     val DIM = Color.parseColor("#8E8C86")
@@ -45,6 +59,49 @@ object Themes {
     )
 
     fun hex(name: String?): String = options.firstOrNull { it.first == name }?.second ?: options[0].second
+}
+
+/** Frosted-glass surface: translucent dark base, soft sheen, light-catching edge and top highlight. */
+class GlassDrawable(private val radius: Float, private val base: Boolean = true) : Drawable() {
+    private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val sheen = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val border = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val spec = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val r = RectF()
+
+    init {
+        fill.style = Paint.Style.FILL
+        fill.color = 0x730C0E10
+        border.style = Paint.Style.STROKE
+        border.strokeWidth = Ui.px(1.2f).coerceAtLeast(1).toFloat()
+        spec.style = Paint.Style.STROKE
+        spec.strokeWidth = Ui.px(1f).coerceAtLeast(1).toFloat()
+        spec.color = 0x55FFFFFF
+    }
+
+    override fun onBoundsChange(b: Rect) {
+        r.set(b)
+        r.inset(0.75f, 0.75f)
+        val t = b.top.toFloat()
+        val bt = b.bottom.toFloat()
+        sheen.shader = LinearGradient(0f, t, 0f, bt,
+            intArrayOf(0x2BFFFFFF, 0x0AFFFFFF, 0x14FFFFFF), floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP)
+        border.shader = LinearGradient(0f, t, 0f, bt,
+            intArrayOf(0x66FFFFFF, 0x1AFFFFFF, 0x33FFFFFF), floatArrayOf(0f, 0.5f, 1f), Shader.TileMode.CLAMP)
+    }
+
+    override fun draw(c: Canvas) {
+        if (base) c.drawRoundRect(r, radius, radius, fill)
+        c.drawRoundRect(r, radius, radius, sheen)
+        c.drawRoundRect(r, radius, radius, border)
+        c.drawLine(r.left + radius, r.top + 1f, r.right - radius, r.top + 1f, spec)
+    }
+
+    override fun setAlpha(alpha: Int) {}
+    override fun setColorFilter(cf: ColorFilter?) {}
+
+    @Deprecated("Deprecated in Java")
+    override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
 }
 
 class Panel(val frame: FrameLayout, val body: LinearLayout, val actions: LinearLayout)
@@ -112,17 +169,46 @@ object Ui {
         return v
     }
 
-    /** Lightweight touch feedback: a 70ms scale/alpha tween, no ripples or overdraw. */
+    fun glass(radiusDp: Float, base: Boolean = true): GlassDrawable = GlassDrawable(px(radiusDp).toFloat(), base)
+
+    fun roundClip(v: View, radiusDp: Float) {
+        val r = px(radiusDp).toFloat()
+        v.outlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: Outline) {
+                outline.setRoundRect(0, 0, view.width, view.height, r)
+            }
+        }
+        v.clipToOutline = true
+    }
+
+    /** Staggered "rise + settle" entrance (expo-out). Cheap: only view properties, no layout. */
+    fun enter(views: List<View>, baseDelay: Long = 0L, step: Long = 55L) {
+        if (!animations) return
+        val ip = PathInterpolator(0.16f, 1f, 0.3f, 1f)
+        views.forEachIndexed { i, v ->
+            v.animate().cancel()
+            v.alpha = 0f
+            v.translationY = px(28f).toFloat()
+            v.scaleX = 0.95f
+            v.scaleY = 0.95f
+            v.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f)
+                .setStartDelay(baseDelay + i * step).setDuration(520L).setInterpolator(ip).start()
+        }
+    }
+
+    /** Spring-style touch feedback: quick press-in, overshoot release. */
     fun pressable(v: View, scale: Boolean = true, onClick: () -> Unit) {
         v.isClickable = true
         v.setOnTouchListener { view, ev ->
             when (ev.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
-                    if (scale) view.animate().scaleX(0.96f).scaleY(0.96f).alpha(0.75f).setDuration(70).start()
-                    else view.animate().alpha(0.85f).setDuration(70).start()
+                    if (scale) view.animate().scaleX(0.94f).scaleY(0.94f).alpha(0.8f).setDuration(90L)
+                        .setInterpolator(DecelerateInterpolator()).start()
+                    else view.animate().alpha(0.88f).setDuration(90L).start()
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL ->
-                    view.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(130).start()
+                    view.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(260L)
+                        .setInterpolator(OvershootInterpolator(2.2f)).start()
             }
             false
         }
