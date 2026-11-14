@@ -15,8 +15,10 @@
         android:id="@+id/topBar"
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="10dp"
         android:layout_weight="0.095"
-        android:background="@color/glass"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="24dp"
@@ -110,41 +112,34 @@
         </LinearLayout>
     </LinearLayout>
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/line" />
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="0.905"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:padding="10dp">
 
         <!-- LEFT RAIL: navigation (filled in code) -->
-        <LinearLayout
-            android:id="@+id/leftRail"
+        <FrameLayout
+            android:id="@+id/leftFrame"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="0.1"
-            android:background="@color/glass"
-            android:orientation="vertical" />
+            android:layout_weight="0.1">
 
-        <View
-            android:layout_width="1dp"
-            android:layout_height="match_parent"
-            android:background="@color/line" />
+            <LinearLayout
+                android:id="@+id/leftRail"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical" />
+        </FrameLayout>
 
         <FrameLayout
             android:id="@+id/content"
             android:layout_width="0dp"
             android:layout_height="match_parent"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
             android:layout_weight="0.82" />
-
-        <View
-            android:layout_width="1dp"
-            android:layout_height="match_parent"
-            android:background="@color/line" />
 
         <!-- RIGHT RAIL: volume -->
         <LinearLayout
@@ -152,7 +147,6 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="0.08"
-            android:background="@color/glass"
             android:gravity="center_horizontal"
             android:orientation="vertical">
 
