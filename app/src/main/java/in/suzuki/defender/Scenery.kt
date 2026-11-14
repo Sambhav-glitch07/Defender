@@ -8,6 +8,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RadialGradient
 import android.graphics.Shader
+import android.os.SystemClock
 import android.view.View
 import java.util.Random
 
@@ -22,7 +23,8 @@ class SceneryView(
     private val kind: Int,
     private val car: Boolean = false,
     private val seed: Long = 1L,
-    private val dim: Int = 0
+    private val dim: Int = 0,
+    startLive: Boolean = false
 ) : View(ctx) {
 
     companion object {
@@ -51,6 +53,52 @@ class SceneryView(
     private var fog: Shader? = null
     private var scrim: Shader? = null
     private var vignette: Shader? = null
+
+    /** Slow ambient drift (parallax layers, drifting glow, twinkling stars) at ~30 fps. */
+    var live: Boolean = startLive
+        set(v) {
+            field = v
+            restart()
+        }
+    private var running = true
+    private val frame = object : Runnable {
+        override fun run() {
+            if (live && running) {
+                invalidate()
+                postDelayed(this, 33L)
+            }
+        }
+    }
+
+    private fun restart() {
+        removeCallbacks(frame)
+        if (live && running) post(frame)
+        else invalidate()
+    }
+
+    fun setRunning(r: Boolean) {
+        running = r
+        restart()
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        restart()
+    }
+
+    override fun onDetachedFromWindow() {
+        removeCallbacks(frame)
+        super.onDetachedFromWindow()
+    }
+
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        super.onWindowVisibilityChanged(visibility)
+        running = visibility == VISIBLE
+        restart()
+    }
+
+    private fun sw(t: Float, period: Float, amp: Float): Float =
+        if (live) Math.sin((t * 6.2831855f / period).toDouble()).toFloat() * amp else 0f
 
     private fun c(s: String) = Color.parseColor(s)
 
@@ -149,22 +197,22 @@ class SceneryView(
             scale *= rough
         }
         path.reset()
-        path.moveTo(0f, h)
-        for (i in 0..n) path.lineTo(w * i / n, ys[i])
-        path.lineTo(w, h)
+        path.moveTo(-w * 0.06f, h)
+        for (i in 0..n) path.lineTo(w * (-0.06f + 1.12f * i / n), ys[i])
+        path.lineTo(w * 1.06f, h)
         path.close()
     }
 
     private fun rolling(path: Path, w: Float, h: Float, base: Float, amp: Float, r: Random) {
         path.reset()
-        path.moveTo(0f, h)
-        path.lineTo(0f, base)
+        path.moveTo(-w * 0.06f, h)
+        path.lineTo(-w * 0.06f, base)
         val steps = 5
         for (i in 1..steps) {
-            val cx = w * (i - 0.5f) / steps
-            path.quadTo(cx, base - amp * (0.3f + r.nextFloat()), w * i / steps, base + (r.nextFloat() - 0.5f) * amp * 0.6f)
+            val cx = w * (-0.06f + 1.12f * (i - 0.5f) / steps)
+            path.quadTo(cx, base - amp * (0.3f + r.nextFloat()), w * (-0.06f + 1.12f * i / steps), base + (r.nextFloat() - 0.5f) * amp * 0.6f)
         }
-        path.lineTo(w, h)
+        path.lineTo(w * 1.06f, h)
         path.close()
     }
 
@@ -182,25 +230,38 @@ class SceneryView(
         p.style = Paint.Style.FILL
         p.shader = sky
         canvas.drawRect(0f, 0f, w, horizon + 2f, p)
-        p.shader = glow
-        canvas.drawRect(0f, 0f, w, horizon + 2f, p)
-        p.shader = null
-        p.color = pal[5]
-        canvas.drawRect(0f, horizon, w, h, p)
+        val t = if (live) (SystemClock.uptimeMillis() % 600000L) / 1000f else 0f
 
-        for (i in 0 until stars.size / 3) {
-            p.color = Color.argb(stars[i * 3 + 2].toInt(), 255, 255, 255)
-            canvas.drawCircle(stars[i * 3], stars[i * 3 + 1], Ui.px(0.9f).toFloat(), p)
-        }
+        canvas.save()
+        canvas.translate(sw(t, 50f, w * 0.08f), 0f)
+        p.shader = glow
+        canvas.drawRect(-w * 0.2f, 0f, w * 1.2f, horizon + 2f, p)
+        p.shader = null
         if (kind != HIGHLAND) {
             p.color = (pal[2] and 0x00FFFFFF) or 0xCC000000.toInt()
             canvas.drawCircle(w * 0.62f, horizon - h * 0.015f, w * 0.055f, p)
         }
+        canvas.restore()
 
+        p.color = pal[5]
+        canvas.drawRect(0f, horizon, w, h, p)
+
+        for (i in 0 until stars.size / 3) {
+            val tw = if (live) 0.65f + 0.35f * Math.sin((t * 1.3f + i).toDouble()).toFloat() else 1f
+            p.color = Color.argb((stars[i * 3 + 2] * tw).toInt(), 255, 255, 255)
+            canvas.drawCircle(stars[i * 3], stars[i * 3 + 1], Ui.px(0.9f).toFloat(), p)
+        }
+
+        canvas.save(); canvas.translate(sw(t, 40f, w * 0.012f), 0f)
         p.shader = shaders[0]; canvas.drawPath(layers[0], p)
+        canvas.restore()
+        canvas.save(); canvas.translate(sw(t, 28f, w * 0.02f), 0f)
         p.shader = shaders[1]; canvas.drawPath(layers[1], p)
+        canvas.restore()
         p.shader = fog; canvas.drawRect(0f, horizon - h * 0.06f, w, horizon + h * 0.12f, p)
+        canvas.save(); canvas.translate(sw(t, 20f, w * 0.03f), 0f)
         p.shader = shaders[2]; canvas.drawPath(layers[2], p)
+        canvas.restore()
         p.shader = null
 
         if (kind == ROAD) {
