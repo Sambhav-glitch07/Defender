@@ -88,6 +88,7 @@ class AppsScreen(env: Env) : Screen(env) {
             return
         }
         val cols = 6
+        val tiles = ArrayList<View>()
         var i = 0
         while (i < apps.size) {
             val row = LinearLayout(ctx)
@@ -97,12 +98,15 @@ class AppsScreen(env: Env) : Screen(env) {
                 if (a == null) {
                     row.addView(View(ctx), Ui.mm(0, Ui.px(124), 1f))
                 } else {
-                    row.addView(tile(a), tileLp())
+                    val tv = tile(a)
+                    tiles.add(tv)
+                    row.addView(tv, tileLp())
                 }
             }
             box.addView(row, Ui.mm(MATCH, WRAP))
             i += cols
         }
+        Ui.enter(tiles.take(36), 0L, 16L)
     }
 
     private fun tileLp(): LinearLayout.LayoutParams {
@@ -116,7 +120,7 @@ class AppsScreen(env: Env) : Screen(env) {
         t.orientation = LinearLayout.VERTICAL
         t.gravity = Gravity.CENTER
         t.setPadding(Ui.px(8), Ui.px(10), Ui.px(8), Ui.px(10))
-        t.background = Ui.rect(C.GLASS, C.LINE)
+        t.background = Ui.glass(14f)
         val iv = ImageView(ctx)
         iv.setImageDrawable(a.icon)
         iv.scaleType = ImageView.ScaleType.FIT_CENTER
