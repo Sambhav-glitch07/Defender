@@ -28,7 +28,7 @@ class SettingsScreen(env: Env) : Screen(env) {
 
         val list = LinearLayout(ctx)
         list.orientation = LinearLayout.VERTICAL
-        list.setBackgroundColor(C.GLASS)
+        list.setBackgroundColor(C.INNER)
         list.setPadding(0, Ui.px(20), 0, 0)
         cats.forEachIndexed { i, n ->
             val t = Ui.text(ctx, n.uppercase(), 13f, C.DIM, Ui.MED, 0.16f)
@@ -56,7 +56,7 @@ class SettingsScreen(env: Env) : Screen(env) {
         sel = i
         for (k in catViews.indices) {
             catViews[k].setTextColor(if (k == i) C.ACCENT else C.DIM)
-            catViews[k].setBackgroundColor(if (k == i) C.GLASS2 else 0)
+            catViews[k].setBackgroundColor(if (k == i) C.INNER2 else 0)
         }
         pane.removeAllViews()
         val col = LinearLayout(ctx)
@@ -117,6 +117,11 @@ class SettingsScreen(env: Env) : Screen(env) {
             Ui.toggle(ctx, env.prefs.getBoolean("keepon", true)) {
                 env.prefs.edit().putBoolean("keepon", it).apply()
                 env.activity.setKeepOn(it)
+            })
+        item(col, "Live wallpaper", "Slow animated background. Turn off on slower hardware.",
+            Ui.toggle(ctx, env.prefs.getBoolean("live", true)) {
+                env.prefs.edit().putBoolean("live", it).apply()
+                env.activity.setLiveWallpaper(it)
             })
         item(col, "Screen transitions", "Fade and slide between screens. Turn off on slower hardware.",
             Ui.toggle(ctx, Ui.animations) {
