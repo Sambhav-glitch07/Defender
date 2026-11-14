@@ -1,6 +1,7 @@
 package `in`.suzuki.defender
 
 import android.Manifest
+import android.animation.ValueAnimator
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -14,13 +15,12 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.view.animation.DecelerateInterpolator
+import android.view.animation.PathInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
-import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import java.text.SimpleDateFormat
@@ -31,6 +31,7 @@ class MainActivity : Activity() {
 
     lateinit var env: Env
     private lateinit var content: FrameLayout
+    private lateinit var leftFrame: FrameLayout
     private lateinit var titleText: TextView
     private lateinit var clockText: TextView
     private lateinit var dateText: TextView
@@ -40,13 +41,18 @@ class MainActivity : Activity() {
     private lateinit var iconAudio: ImageView
     private lateinit var volText: TextView
     private lateinit var volMute: ImageView
+    private lateinit var pill: View
+    private var wallpaper: SceneryView? = null
 
-    private class RailItem(val cell: View, val bar: View, val icon: ImageView, val label: TextView)
+    private class RailItem(val cell: View, val icon: ImageView, val label: TextView) {
+        var tint = C.DIM
+    }
 
     private val rail = HashMap<Dest, RailItem>()
     private val screens = HashMap<Dest, Screen>()
     private var current: Dest? = null
 
+    private val expo = PathInterpolator(0.16f, 1f, 0.3f, 1f)
     private val handler = Handler(Looper.getMainLooper())
     private val permCallbacks = HashMap<Int, () -> Unit>()
     private var permCode = 100
@@ -73,16 +79,17 @@ class MainActivity : Activity() {
         setContentView(R.layout.activity_main)
         env = Env(this)
 
-        // Global wallpaper behind the glass UI (Pivi-Pro style).
+        // Global wallpaper behind the glass UI.
         val sceneMode = prefs.getInt("scene", 0)
         if (sceneMode != 4) {
             val kind = if (sceneMode in 1..3) sceneMode - 1 else SceneryView.HIGHLAND
-            findViewById<FrameLayout>(R.id.root).addView(
-                SceneryView(this, kind, false, 3L, 110), 0, FrameLayout.LayoutParams(MATCH, MATCH)
-            )
+            val wp = SceneryView(this, kind, false, 3L, 95, prefs.getBoolean("live", true))
+            wallpaper = wp
+            findViewById<FrameLayout>(R.id.root).addView(wp, 0, FrameLayout.LayoutParams(MATCH, MATCH))
         }
 
         content = findViewById(R.id.content)
+        leftFrame = findViewById(R.id.leftFrame)
         titleText = findViewById(R.id.titleText)
         clockText = findViewById(R.id.clockText)
         dateText = findViewById(R.id.dateText)
@@ -92,6 +99,12 @@ class MainActivity : Activity() {
         iconAudio = findViewById(R.id.iconAudio)
         volText = findViewById(R.id.volText)
         volMute = findViewById(R.id.volMute)
+
+        // Floating glass chrome.
+        findViewById<View>(R.id.topBar).background = Ui.glass(24f)
+        leftFrame.background = Ui.glass(28f)
+        findViewById<View>(R.id.rightRail).background = Ui.glass(28f)
+        Ui.roundClip(content, 28f)
 
         findViewById<ImageView>(R.id.brandIcon).setColorFilter(C.ACCENT)
         setKeepOn(prefs.getBoolean("keepon", true))
@@ -120,6 +133,7 @@ class MainActivity : Activity() {
         super.onResume()
         env.bt.start()
         env.loc.start()
+        wallpaper?.setRunning(true)
         handler.removeCallbacks(tick)
         handler.post(tick)
     }
@@ -127,6 +141,7 @@ class MainActivity : Activity() {
     override fun onPause() {
         super.onPause()
         handler.removeCallbacks(tick)
+        wallpaper?.setRunning(false)
         env.loc.stop()
         env.bt.stop()
     }
@@ -163,6 +178,10 @@ class MainActivity : Activity() {
         else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
+    fun setLiveWallpaper(on: Boolean) {
+        wallpaper?.live = on
+    }
+
     // ------------------------------------------------------------ permissions
     fun requestPerms(perms: Array<String>, cb: () -> Unit) {
         val need = perms.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
@@ -186,6 +205,18 @@ class MainActivity : Activity() {
     // ------------------------------------------------------------ chrome
     private fun buildRail() {
         val rl = findViewById<LinearLayout>(R.id.leftRail)
+
+        // Sliding selection pill (sits behind the rail items).
+        pill = View(this)
+        pill.background = Ui.rect(
+            (C.ACCENT and 0x00FFFFFF) or 0x26000000,
+            (C.ACCENT and 0x00FFFFFF) or 0x59000000, 1f, 20f
+        )
+        pill.alpha = 0f
+        val pillLp = FrameLayout.LayoutParams(MATCH, Ui.px(10))
+        pillLp.setMargins(Ui.px(8), 0, Ui.px(8), 0)
+        leftFrame.addView(pill, 0, pillLp)
+
         for (d in Dest.values()) {
             val cell = FrameLayout(this)
             val inner = LinearLayout(this)
@@ -199,16 +230,9 @@ class MainActivity : Activity() {
             inner.addView(ic, LinearLayout.LayoutParams(Ui.px(28), Ui.px(28)))
             inner.addView(lb, LinearLayout.LayoutParams(WRAP, WRAP))
             cell.addView(inner, FrameLayout.LayoutParams(MATCH, MATCH))
-            val bar = View(this)
-            bar.setBackgroundColor(C.ACCENT)
-            bar.visibility = View.INVISIBLE
-            val barLp = FrameLayout.LayoutParams(Ui.px(3), MATCH, Gravity.START)
-            barLp.topMargin = Ui.px(14)
-            barLp.bottomMargin = Ui.px(14)
-            cell.addView(bar, barLp)
             Ui.pressable(cell, false) { navigate(d) }
             rl.addView(cell, LinearLayout.LayoutParams(MATCH, 0, 1f))
-            rail[d] = RailItem(cell, bar, ic, lb)
+            rail[d] = RailItem(cell, ic, lb)
         }
     }
 
@@ -250,8 +274,7 @@ class MainActivity : Activity() {
             clockText.text = t
             dateText.text = dateFmt.format(now).uppercase()
         }
-        val btOn = env.bt.isOn()
-        iconBt.setColorFilter(if (btOn) C.ACCENT else C.DIM)
+        iconBt.setColorFilter(if (env.bt.isOn()) C.ACCENT else C.DIM)
         iconWifi.setColorFilter(if (env.sys.wifiConnected()) C.ACCENT else C.DIM)
         iconPhone.setColorFilter(if (env.bt.connectedNames().isNotEmpty()) C.ACCENT else C.DIM)
         iconAudio.setColorFilter(if (env.audio.isMusicActive) C.ACCENT else C.DIM)
@@ -283,38 +306,84 @@ class MainActivity : Activity() {
         oldScreen?.onHide()
         val ov = oldScreen?.root
 
-        titleText.text = d.label.uppercase()
+        // Title cross-fade.
+        if (Ui.animations) {
+            titleText.animate().alpha(0f).setDuration(90L).withEndAction {
+                titleText.text = d.label.uppercase()
+                titleText.animate().alpha(1f).setDuration(220L).start()
+            }.start()
+        } else titleText.text = d.label.uppercase()
+
+        // Home = floating cards; every other screen sits on one frosted slab.
+        content.background = if (d == Dest.HOME) null else Ui.glass(28f)
         content.addView(v, FrameLayout.LayoutParams(MATCH, MATCH))
 
         if (Ui.animations && ov != null && old != null) {
             val dir = if (d.ordinal > old.ordinal) 1f else -1f
             v.alpha = 0f
             v.translationX = Ui.slide() * dir
-            v.animate().alpha(1f).translationX(0f).setDuration(240L)
-                .setInterpolator(DecelerateInterpolator()).start()
+            v.scaleX = 0.965f
+            v.scaleY = 0.965f
+            v.animate().alpha(1f).translationX(0f).scaleX(1f).scaleY(1f)
+                .setDuration(420L).setInterpolator(expo).start()
             ov.animate().cancel()
-            ov.animate().alpha(0f).setDuration(160L).withEndAction {
-                if (current != old) content.removeView(ov)
-                ov.alpha = 1f
-                ov.translationX = 0f
-            }.start()
+            ov.animate().alpha(0f).translationX(-Ui.slide() * dir * 0.5f).scaleX(0.985f).scaleY(0.985f)
+                .setDuration(220L).withEndAction {
+                    if (current != old) content.removeView(ov)
+                    ov.alpha = 1f
+                    ov.translationX = 0f
+                    ov.scaleX = 1f
+                    ov.scaleY = 1f
+                }.start()
         } else {
             v.alpha = 1f
             v.translationX = 0f
+            v.scaleX = 1f
+            v.scaleY = 1f
             if (ov != null) content.removeView(ov)
         }
         screen.onShow()
         updateRail()
     }
 
+    private fun tintTo(item: RailItem, to: Int) {
+        if (item.tint == to) return
+        if (!Ui.animations) {
+            item.icon.setColorFilter(to)
+            item.label.setTextColor(to)
+        } else {
+            val a = ValueAnimator.ofArgb(item.tint, to)
+            a.duration = 260L
+            a.addUpdateListener {
+                val c = it.animatedValue as Int
+                item.icon.setColorFilter(c)
+                item.label.setTextColor(c)
+            }
+            a.start()
+        }
+        item.tint = to
+    }
+
     private fun updateRail() {
-        for ((d, item) in rail) {
-            val sel = d == current
-            val c = if (sel) C.ACCENT else C.DIM
-            item.icon.setColorFilter(c)
-            item.label.setTextColor(c)
-            item.bar.visibility = if (sel) View.VISIBLE else View.INVISIBLE
-            item.cell.setBackgroundColor(if (sel) (C.ACCENT and 0x00FFFFFF) or 0x22000000 else 0)
+        val cur = current ?: return
+        for ((d, item) in rail) tintTo(item, if (d == cur) C.ACCENT else C.DIM)
+        val sel = rail[cur] ?: return
+        leftFrame.post {
+            val h = sel.cell.height - Ui.px(10)
+            if (h > 0) {
+                val lp = pill.layoutParams
+                if (lp.height != h) {
+                    lp.height = h
+                    pill.layoutParams = lp
+                }
+                val y = sel.cell.top + Ui.px(5).toFloat()
+                if (pill.alpha == 0f || !Ui.animations) {
+                    pill.translationY = y
+                    pill.alpha = 1f
+                } else {
+                    pill.animate().translationY(y).setDuration(460L).setInterpolator(expo).start()
+                }
+            }
         }
     }
 }
