@@ -35,7 +35,7 @@ class MediaScreen(env: Env) : Screen(env) {
         
         // ---- album artwork
         val left = FrameLayout(ctx)
-        left.setBackgroundColor(C.GLASS)
+        left.setBackgroundColor(C.INNER)
         art = ImageView(ctx)
         art.background = Ui.rect(C.SURFACE2, C.LINE)
         showFallback()
