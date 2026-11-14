@@ -107,6 +107,10 @@ class MainActivity : Activity() {
         Ui.roundClip(content, 28f)
 
         findViewById<ImageView>(R.id.brandIcon).setColorFilter(C.ACCENT)
+        findViewById<ImageView>(R.id.iconApps).apply {
+            setColorFilter(C.ACCENT)
+            Ui.pressable(this) { navigate(Dest.APPS) }
+        }
         setKeepOn(prefs.getBoolean("keepon", true))
         setBrightness(prefs.getFloat("bright", -1f))
         buildRail()
