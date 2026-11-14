@@ -53,26 +53,47 @@ class AppsScreen(env: Env) : Screen(env) {
         loading = true
         Thread {
             val pm = ctx.packageManager
-            val q = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-            val list: List<ResolveInfo> = try {
-                pm.queryIntentActivities(q, 0)
-            } catch (e: Exception) {
-                emptyList()
-            }
-            val out = list
-                .filter { it.activityInfo.packageName != ctx.packageName }
-                .map {
+            val out = ArrayList<AppEntry>()
+            val seen = HashSet<String>()
+            // Phones/head units use LAUNCHER; Android TV boxes use LEANBACK_LAUNCHER.
+            for (cat in listOf(Intent.CATEGORY_LAUNCHER, Intent.CATEGORY_LEANBACK_LAUNCHER)) {
+                val q = Intent(Intent.ACTION_MAIN).addCategory(cat)
+                val list: List<ResolveInfo> = try {
+                    pm.queryIntentActivities(q, 0)
+                } catch (e: Exception) {
+                    emptyList()
+                }
+                for (ri in list) {
+                    val pkg = ri.activityInfo.packageName
+                    if (pkg == ctx.packageName || !seen.add(pkg)) continue
                     val icon: Drawable? = try {
-                        it.loadIcon(pm)
+                        ri.loadIcon(pm)
                     } catch (e: Exception) {
                         null
                     }
-                    AppEntry(it.loadLabel(pm).toString(), it.activityInfo.packageName, icon)
+                    out.add(AppEntry(ri.loadLabel(pm).toString(), pkg, icon))
                 }
-                .distinctBy { it.pkg }
-                .sortedBy { it.label.lowercase() }
+            }
+            if (out.isEmpty()) {
+                // Fallback: every installed app that has any launch intent.
+                try {
+                    for (ai in pm.getInstalledApplications(0)) {
+                        val pkg = ai.packageName
+                        if (pkg == ctx.packageName || !seen.add(pkg)) continue
+                        if (pm.getLaunchIntentForPackage(pkg) == null && pm.getLeanbackLaunchIntentForPackage(pkg) == null) continue
+                        val icon: Drawable? = try {
+                            ai.loadIcon(pm)
+                        } catch (e: Exception) {
+                            null
+                        }
+                        out.add(AppEntry(ai.loadLabel(pm).toString(), pkg, icon))
+                    }
+                } catch (e: Exception) {
+                }
+            }
+            val sorted = out.sortedBy { it.label.lowercase() }
             env.main.post {
-                apps = out
+                apps = sorted
                 loading = false
                 loadedAt = SystemClock.elapsedRealtime()
                 render()
@@ -132,7 +153,8 @@ class AppsScreen(env: Env) : Screen(env) {
         lb.setPadding(0, Ui.px(10), 0, 0)
         t.addView(lb, Ui.mm(MATCH, WRAP))
         Ui.pressable(t) {
-            val i = ctx.packageManager.getLaunchIntentForPackage(a.pkg)
+            val pm = ctx.packageManager
+            val i = pm.getLaunchIntentForPackage(a.pkg) ?: pm.getLeanbackLaunchIntentForPackage(a.pkg)
             if (i != null) env.launch(i) else env.toast("Can't open ${a.label}")
         }
         return t
