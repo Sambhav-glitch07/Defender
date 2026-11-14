@@ -39,7 +39,7 @@ class NavScreen(env: Env) : Screen(env) {
         bar.orientation = LinearLayout.HORIZONTAL
         bar.gravity = Gravity.CENTER_VERTICAL
         bar.setPadding(Ui.px(18), 0, Ui.px(8), 0)
-        bar.background = Ui.rect(0xE6141618.toInt(), C.LINE)
+        bar.background = Ui.glass(14f)
         bar.addView(Ui.icon(ctx, R.drawable.ic_search, 22f, C.ACCENT))
         search = EditText(ctx)
         search.hint = "Search destination"
@@ -67,7 +67,7 @@ class NavScreen(env: Env) : Screen(env) {
         val chip = LinearLayout(ctx)
         chip.orientation = LinearLayout.VERTICAL
         chip.setPadding(Ui.px(18), Ui.px(14), Ui.px(24), Ui.px(14))
-        chip.background = Ui.rect(0xE6141618.toInt(), C.LINE)
+        chip.background = Ui.glass(14f)
         chip.addView(Ui.caps(ctx, "Current location", 10f, C.ACCENT))
         locText = Ui.text(ctx, "", 18f, C.TEXT, Ui.LIGHT)
         locText.setPadding(0, Ui.px(6), 0, 0)
@@ -84,7 +84,7 @@ class NavScreen(env: Env) : Screen(env) {
         // ---- route column
         val col = LinearLayout(ctx)
         col.orientation = LinearLayout.VERTICAL
-        col.setBackgroundColor(C.GLASS)
+        col.setBackgroundColor(C.INNER)
         col.setPadding(Ui.px(28), Ui.px(28), Ui.px(28), Ui.px(24))
         col.addView(Ui.caps(ctx, "Route", 11f, C.ACCENT))
         destText = Ui.text(ctx, "", 26f, C.TEXT, Ui.LIGHT)
